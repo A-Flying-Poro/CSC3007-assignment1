@@ -74,7 +74,8 @@ $(document).ready(function (event) { return __awaiter(_this, void 0, void 0, fun
                             name: 'south',
                             data: 'south'
                         }
-                    ]
+                    ],
+                    pageLength: 25
                 });
                 return [4 /*yield*/, updateTable()];
             case 1:

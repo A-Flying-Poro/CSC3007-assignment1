@@ -85,7 +85,8 @@ $(document).ready(async event => {
                 name: 'south',
                 data: 'south'
             }
-        ]
+        ],
+        pageLength: 25
     });
 
     await updateTable();
