@@ -48,8 +48,12 @@ interface TableData {
     south: number;
 }
 
+interface ApiData {
+    tableData: TableData[];
+    lastUpdated: Date;
+}
+
 const apiUrl: string = 'https://api.data.gov.sg/v1/environment/psi'
-const timezoneOffset: string = '+08:00'
 
 let table;
 // let lastUpdated: Date = null;
@@ -99,14 +103,17 @@ async function updateTable() {
     let data = await fetchData();
 
     table.clear();
-    table.rows.add(data);
+    table.rows.add(data.tableData);
     table.draw(false);
 
     $('#captionUpdating').addClass('d-none');
     $('#captionUpdated').removeClass('d-none');
+    $('#captionLastUpdated')
+        .text(getTimeDifference(new Date(), data.lastUpdated, false))
+        .prop('title', data.lastUpdated)
 }
 
-async function fetchData() {
+async function fetchData(): Promise<ApiData> {
     try {
         let response = await fetch(apiUrl);
         let responseJson: ApiResponse = await response.json();
@@ -124,10 +131,44 @@ async function fetchData() {
                 south: item.south
             })
         }
+        let lastUpdated = new Date(responseJson.items[0].update_timestamp)
 
-        return tableData;
+        return {
+            tableData: tableData,
+            lastUpdated: lastUpdated
+        };
     } catch (e) {
         console.error('Error occurred while fetching data.', e);
         throw e;
     }
+}
+
+/**
+ * Returns a string for brief description of the duration between the 2 Date objects.
+ * e.g. 1 min ago, 3 mins later
+ * If the dateFrom is after dateTo, time returned will be in the past (ago)
+ * If the dateFrom is before dateTo, time returned will be in the future (later)
+ * If the dateFrom is within 5 seconds from dateTo, time returned will be "just now"
+ * @param {Date} dateFrom Date object to measure from
+ * @param {Date} dateTo Date object to measure to
+ * @param {boolean} capitalise True if the first character is to be capitalised
+ * @returns {string} A brief description of the duration betwen the 2 Date objects, e.g. 1 min ago
+ */
+function getTimeDifference(dateFrom: Date, dateTo: Date, capitalise: boolean = true) {
+    let after = dateTo - dateFrom > 0;
+    let timePresentPast = after ? 'later' : 'ago';
+    let timeDiffMili = Math.abs(dateTo - dateFrom);
+    let timeDiffSec = Math.floor(timeDiffMili / 1000);
+    if (timeDiffSec < 5)
+        return `${capitalise ? 'J' : 'j'}ust now`;
+    let timeDiffMin = Math.floor(timeDiffSec / 60);
+    if (timeDiffMin < 1)
+        return `${timeDiffSec} seconds ${timePresentPast}`;
+    let timeDiffHour = Math.floor(timeDiffMin / 60);
+    if (timeDiffHour < 1)
+        return `${timeDiffMin} minute${timeDiffMin > 1 ? 's' : ''} ${timePresentPast}`;
+    let timeDiffDays = Math.floor(timeDiffHour / 24);
+    if (timeDiffDays < 1)
+        return `${timeDiffHour} hour${timeDiffHour > 1 ? 's' : ''} ${timePresentPast}`;
+    return `${timeDiffDays} day${timeDiffDays > 1 ? 's' : ''} ${timePresentPast}`;
 }
